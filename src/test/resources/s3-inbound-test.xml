@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:integration="http://www.springframework.org/schema/integration"
+	xmlns:aws-s3="http://www.springframework.org/schema/integration/aws/s3"		
+	xsi:schemaLocation=
+	"http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+	http://www.springframework.org/schema/integration/aws/s3 http://www.springframework.org/schema/integration/aws/s3/spring-integration-aws-s3-2.1.xsd
+	http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-2.1.xsd">
+	
+		<import resource="common-resources.xml"/>
+		
+		<integration:channel id="s3InboundChannel"/>		
+		
+		<aws-s3:inbound-channel-adapter
+			propertiesFile="classpath:awscredentials.properties"
+			channel="s3InboundChannel"
+			bucket="test.bucket.by.amol"
+			remote-directory="test"
+			directory="D:\\Amol\\AWSSync"
+			file-wildcard="*.txt">
+			<integration:poller fixed-rate="1000"/>	
+		</aws-s3:inbound-channel-adapter>	
+			
+</beans>

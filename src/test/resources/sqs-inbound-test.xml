@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:integration="http://www.springframework.org/schema/integration"
+	xmlns:aws-sqs="http://www.springframework.org/schema/integration/aws/sqs"		
+	xsi:schemaLocation=
+	"http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+	http://www.springframework.org/schema/integration/aws/sqs http://www.springframework.org/schema/integration/aws/sqs/spring-integration-aws-sqs-2.1.xsd
+	http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-2.1.xsd">
+	
+	<import resource="common-resources.xml"/>
+
+	<integration:channel id="inboundSQSAdapter"/>
+	
+	<aws-sqs:inbound-channel-adapter
+		propertiesFile="classpath:awscredentials.properties" 
+		channel="inboundSQSAdapter"
+		sqs-queue="https://queue.amazonaws.com/439454740675/MyTestQueue"
+		transactional="true"
+		max-redelivery-attempts="3">
+			<integration:poller fixed-rate="5000">
+				<integration:transactional isolation="DEFAULT" propagation="REQUIRED" 
+						transaction-manager="txManager"/>
+			</integration:poller>
+	</aws-sqs:inbound-channel-adapter>	
+	
+	<bean id="txManager" class="org.springframework.integration.common.DummyTransactionManager"/>		
+</beans>

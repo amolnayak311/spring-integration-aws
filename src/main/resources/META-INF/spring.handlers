@@ -1,0 +1,3 @@
+http\://www.springframework.org/schema/integration/aws/ses=org.springframework.integration.aws.ses.config.AmazonSESNamespaceHandler
+http\://www.springframework.org/schema/integration/aws/s3=org.springframework.integration.aws.s3.config.AmazonS3NamespaceHandler
+http\://www.springframework.org/schema/integration/aws/sqs=org.springframework.integration.aws.sqs.config.AmazonSQSNamespaceHandler

@@ -1,0 +1,3 @@
+http\://www.springframework.org/schema/integration/aws/ses/spring-integration-aws-ses-2.1.xsd=org/springframework/integration/aws/ses/config/spring-integration-aws-ses-2.1.xsd
+http\://www.springframework.org/schema/integration/aws/s3/spring-integration-aws-s3-2.1.xsd=org/springframework/integration/aws/s3/config/spring-integration-aws-s3-2.1.xsd
+http\://www.springframework.org/schema/integration/aws/sqs/spring-integration-aws-sqs-2.1.xsd=org/springframework/integration/aws/sqs/config/spring-integration-aws-sqs-2.1.xsd
