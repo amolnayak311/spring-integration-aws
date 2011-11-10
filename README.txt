@@ -1,0 +1,1 @@
+Please refer to the Getting started doc at location docs/Spring Integration AWS GSG.docx
