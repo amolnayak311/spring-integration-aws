@@ -27,7 +27,7 @@ public interface AmazonSQSMessageHeaders {
 
 	static final String MESSAGE_ATTRIBUTES = "message_attributes";
 	static final String SERVER_SIDE_PAYLOAD_MD5 = "server_side_payload_md5";
-	static final String MESSAGE_ID = "mesage_id";
+	static final String MESSAGE_ID = "message_id";
 	static final String MESSAGE_RECEIPT_HANDLE = "message_receipt_handle";
 	
 }
