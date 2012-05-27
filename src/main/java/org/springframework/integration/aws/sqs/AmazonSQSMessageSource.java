@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2011 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 
 	
 	private AmazonWSCredentials credentials;
-	private AmazonSQSOperations client;
+	private AmazonSQSOperations sqsOperations;
 	private String sqsQueue;
 	private boolean isTransactional;
 	private Integer maxRedeliveryAttempts;
@@ -62,13 +62,16 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 		this.credentials = credentials;
 		Assert.isTrue(StringUtils.hasText(sqsQueue), "Provide a non null, non empty queue");
 		this.sqsQueue = sqsQueue;
-		client = new AmazonSQSOperationsImpl(credentials);
+		
 	}	
 
 	
 	protected void onInit() throws Exception {
 		if(isTransactional && maxRedeliveryAttempts > 0)
 			redeliveryStrategy = new AmazonSQSRedeliveryCountDeliveryStrategy(maxRedeliveryAttempts);
+		
+		if(sqsOperations == null)
+			sqsOperations = new AmazonSQSOperationsImpl(credentials);
 	}
 
 	/* (non-Javadoc)
@@ -86,7 +89,7 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 		//Callable method max number of messages per poll times
 		Collection<AmazonSQSMessage> messages;
 		try {
-			messages = client.receiveMessages(sqsQueue, 1);
+			messages = sqsOperations.receiveMessages(sqsQueue, 1);
 		} catch (RuntimeException e) {
 			logger.error("Caught Exception while receiving mesage",e);			
 			throw e;
@@ -108,7 +111,7 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 							//NOTE: If the transaction is longer than the visibility timeout of
 							//the message, then the message would possibly be consumed by some 
 							//other consumer too.								
-							client.deleteMessage(receiptHandle, sqsQueue);
+							sqsOperations.deleteMessage(receiptHandle, sqsQueue);
 						} else {
 							//Should never reach here as we would have already thrown an exception if the 
 							//transaction is read only
@@ -132,7 +135,7 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 												+ " unsuccessful of attempts to receive");
 									}
 								}
-								client.deleteMessage(receiptHandle, sqsQueue);
+								sqsOperations.deleteMessage(receiptHandle, sqsQueue);
 								redeliveryStrategy.cleanup(messageId);
 							}								
 						}
@@ -165,7 +168,7 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 				}
 			}finally {
 				if(!isTransactional)
-					client.deleteMessage(sqsMessage.getReceiptHandle(), sqsQueue);
+					sqsOperations.deleteMessage(sqsMessage.getReceiptHandle(), sqsQueue);
 				
 					
 			}
@@ -261,6 +264,25 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 	 */
 	public void setMaxRedeliveryAttempts(Integer maxRedeliveryAttempts) {
 		this.maxRedeliveryAttempts = maxRedeliveryAttempts;
-	}	
+	}
 
+
+	/**
+	 * Gets the implementation of the {@link AmazonSQSOperations} that will be used to perform the SQS
+	 * operations
+	 * @return
+	 */
+	public AmazonSQSOperations getSqsOperations() {
+		return sqsOperations;
+	}
+
+
+	/**
+	 * Sets the implementation of the {@link AmazonSQSOperations} that will be used to perform the SQS
+	 * operations
+	 * 
+	 */
+	public void setSqsOperations(AmazonSQSOperations sqsOperations) {
+		this.sqsOperations = sqsOperations;
+	}
 }

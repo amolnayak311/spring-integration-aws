@@ -12,8 +12,16 @@
 	
 	<integration:channel id="sqsOutboundChannel"/>
 	
+	 <!-- 
 	<aws-sqs:outbound-channel-adapter
 		propertiesFile="classpath:awscredentials.properties" 
 		channel="sqsOutboundChannel"
-		destination-queue="https://queue.amazonaws.com/439454740675/MyTestQueue"/>		
+		destination-queue="https://queue.amazonaws.com/439454740675/MyTestQueue"/>
+	  -->
+	  
+	<aws-sqs:outbound-channel-adapter
+		propertiesFile="classpath:awscredentials.properties" 
+		channel="sqsOutboundChannel"
+		destination-queue="https://ap-southeast-1.queue.amazonaws.com/439454740675/APAC_TEST_QUEUE"/>
+	  		
 </beans>

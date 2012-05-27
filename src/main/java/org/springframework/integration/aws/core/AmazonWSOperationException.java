@@ -23,40 +23,40 @@ package org.springframework.integration.aws.core;
 public class AmazonWSOperationException extends RuntimeException {
 
 	/**
-	 * 
+	 *
 	 */
-	private static final long serialVersionUID = 3391888045993691634L;	
+	private static final long serialVersionUID = 3391888045993691634L;
 
-	private String accessKey;
-	
+	private final String accessKey;
+
 	public AmazonWSOperationException(String accessKey) {
 		super();
 		this.accessKey = accessKey;
 	}
-	
+
 	public AmazonWSOperationException(String accessKey,String message) {
 		super(message);
 		this.accessKey = accessKey;
 	}
 
 	public AmazonWSOperationException(String accessKey,String message, Throwable cause) {
-		super(message, cause);		
+		super(message, cause);
 		this.accessKey = accessKey;
 	}
 
 	public AmazonWSOperationException(String accessKey,Throwable cause) {
-		super(cause);		
+		super(cause);
 		this.accessKey = accessKey;
 	}
 
 	/**
-	 * Get the access key for the user who encountered the exception 
+	 * Get the access key for the user who encountered the exception
 	 * @return
 	 */
 	public String getAccessKey() {
 		return accessKey;
 	}
-	
-	
+
+
 
 }

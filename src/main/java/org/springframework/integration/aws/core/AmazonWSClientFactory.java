@@ -15,23 +15,23 @@
  */
 package org.springframework.integration.aws.core;
 
+import com.amazonaws.AmazonWebServiceClient;
+
 /**
- * The common interfaces for all implementations of Amazon WS Credentials
+ * The factory interface that would be used to get the implementation of the appropriate
+ * instance of {@link AmazonWebServiceClient}
+ *
  * @author Amol Nayak
  *
  */
-public interface AmazonWSCredentials {
+public interface AmazonWSClientFactory<T extends AmazonWebServiceClient> {
 
 	/**
-	 * Get the Access key to the Amazon WS account
-	 * @return
+	 * Returns the instance of the {@link AmazonWebServiceClient} with the apropriate endpoint value
+	 * set based on the provided url value
+	 *
+	 * @param url The url of the service
+	 * @return The appropriate {@link AmazonWebServiceClient} for the provided endpoint URL
 	 */
-	public String getAccessKey();
-	
-	/**
-	 * Get the Secret key to the Amazon WS account
-	 * @return
-	 */
-	public String getSecretKey();
-
+	T getClient(String url);
 }

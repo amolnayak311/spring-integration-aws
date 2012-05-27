@@ -21,6 +21,8 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.integration.aws.core.AbstractAmazonWSClientFactory;
+import org.springframework.integration.aws.core.AmazonWSClientFactory;
 import org.springframework.integration.aws.core.AmazonWSCredentials;
 import org.springframework.integration.aws.core.AmazonWSOperationException;
 import org.springframework.util.Assert;
@@ -42,22 +44,30 @@ import com.amazonaws.services.sqs.model.SendMessageResult;
 public class AmazonSQSOperationsImpl implements AmazonSQSOperations {
 
 	private final Log logger = LogFactory.getLog(AmazonSQSOperationsImpl.class);
-	
-	private AmazonWSCredentials credentials;
-	private AmazonSQSClient client;
+
+	private final AmazonWSCredentials credentials;
+
 	private AmazonSQSMessageTransformer messageTransformer = new AmazonSQSMessageJSONTransformer();
-	
+
+	private AmazonWSClientFactory<AmazonSQSClient> clientFactory;
+
 	/**
 	 * The default constructor
 	 * @param credentials
 	 */
-	public AmazonSQSOperationsImpl(AmazonWSCredentials credentials) {
+	public AmazonSQSOperationsImpl(final AmazonWSCredentials credentials) {
 		if(credentials == null)
 			throw new AmazonWSOperationException(null, "Credentials cannot be null, provide a non null valid set of credentials");
-		
-		this.credentials = credentials;		
-		this.client = new AmazonSQSClient(new BasicAWSCredentials(credentials.getAccessKey(), 
-				credentials.getSecretKey()));
+
+		this.credentials = credentials;
+		clientFactory = new AbstractAmazonWSClientFactory<AmazonSQSClient>() {
+
+			@Override
+			protected AmazonSQSClient getClientImplementation() {
+				return new AmazonSQSClient(new BasicAWSCredentials(credentials.getAccessKey(),
+						credentials.getSecretKey()));
+			}
+		};
 	}
 
 
@@ -65,7 +75,7 @@ public class AmazonSQSOperationsImpl implements AmazonSQSOperations {
 	/* (non-Javadoc)
 	 * @see org.springframework.integration.aws.sqs.core.AmazonSQSOperations#sendMessage(java.lang.String, java.lang.String)
 	 */
-	
+
 	public AmazonSQSSendMessageResponse sendMessage(String queueURL,
 			AmazonSQSMessage message) {
 		if(logger.isDebugEnabled())
@@ -74,18 +84,18 @@ public class AmazonSQSOperationsImpl implements AmazonSQSOperations {
 		try {
 			transformedPayload = messageTransformer.serialize(message);
 			SendMessageResult result =
-				client.sendMessage(new SendMessageRequest(queueURL, transformedPayload));
+				clientFactory.getClient(queueURL).sendMessage(new SendMessageRequest(queueURL, transformedPayload));
 			if(logger.isDebugEnabled())
 				logger.debug("Message successfully sent");
 			return new AmazonSQSSendMessageResponse(result.getMessageId(), result.getMD5OfMessageBody());
-		} catch (Exception e) {	
-			logger.error("Exception thrown while sending a message to queue \"" + queueURL + 
+		} catch (Exception e) {
+			logger.error("Exception thrown while sending a message to queue \"" + queueURL +
 					"\", check exception for more details",e);
-			throw new AmazonSQSException(credentials.getAccessKey(), 
-					"Exception while sending message to the queue \"" + 
-						queueURL + "\", see nested exception for more details", 
+			throw new AmazonSQSException(credentials.getAccessKey(),
+					"Exception while sending message to the queue \"" +
+						queueURL + "\", see nested exception for more details",
 					queueURL, transformedPayload, e);
-		}		
+		}
 	}
 
 
@@ -94,22 +104,22 @@ public class AmazonSQSOperationsImpl implements AmazonSQSOperations {
 	 * Gets the specified number of Messages from SQS
 	 */
 	public Collection<AmazonSQSMessage> receiveMessages(String queueURL,
-			int maxNumberOfMessages) {		
+			int maxNumberOfMessages) {
 		ReceiveMessageRequest request = new ReceiveMessageRequest(queueURL);
 		if(maxNumberOfMessages > 0)
 			request.withMaxNumberOfMessages(maxNumberOfMessages);
 		else
-			request.withMaxNumberOfMessages(1);	
-										
+			request.withMaxNumberOfMessages(1);
+
 		ReceiveMessageResult result;
 		try {
-			result = client.receiveMessage(request);
-		} catch (Exception e) {			
-			logger.error("Exception thrown while receiving a message from the queue \"" + queueURL + 
+			result = clientFactory.getClient(queueURL).receiveMessage(request);
+		} catch (Exception e) {
+			logger.error("Exception thrown while receiving a message from the queue \"" + queueURL +
 					"\", check exception for more details",e);
-			throw new AmazonSQSException(credentials.getAccessKey(), 
-					"Exception while receiving message from the queue \"" + 
-					queueURL + "\", see nested exception for more details", 
+			throw new AmazonSQSException(credentials.getAccessKey(),
+					"Exception while receiving message from the queue \"" +
+					queueURL + "\", see nested exception for more details",
 					queueURL, null, e);
 		}
 		List<Message> messages = result.getMessages();
@@ -130,28 +140,28 @@ public class AmazonSQSOperationsImpl implements AmazonSQSOperations {
 	 */
 	private void buildSQSMessage(Collection<AmazonSQSMessage> response,
 			Message message) {
-		AmazonSQSMessage sqsMessage = messageTransformer.deserialize(message.getBody());		 
+		AmazonSQSMessage sqsMessage = messageTransformer.deserialize(message.getBody());
 		response.add(sqsMessage);
-		sqsMessage.setMD5OfBody(message.getMD5OfBody());		
-		sqsMessage.setMessageId(message.getMessageId());		
+		sqsMessage.setMD5OfBody(message.getMD5OfBody());
+		sqsMessage.setMessageId(message.getMessageId());
 		sqsMessage.setReceiptHandle(message.getReceiptHandle());
 	}
-	
+
 	/**
 	 * Deletes the message with the given receiptHandle from the given queue
 	 */
 	public void deleteMessage(String receiptHandle, String queueURL) {
 		try {
-			client.deleteMessage(new DeleteMessageRequest(queueURL,receiptHandle));
-		} catch (Exception e) {			
-			logger.error("Exception thrown while deleteing a message from the queue \"" + queueURL + 
+			clientFactory.getClient(queueURL).deleteMessage(new DeleteMessageRequest(queueURL,receiptHandle));
+		} catch (Exception e) {
+			logger.error("Exception thrown while deleteing a message from the queue \"" + queueURL +
 					"\", check exception for more details",e);
-			throw new AmazonSQSException(credentials.getAccessKey(), 
-					"Exception while deleting the message from the queue \"" + 
-					queueURL + "\", see nested exception for more details", 
+			throw new AmazonSQSException(credentials.getAccessKey(),
+					"Exception while deleting the message from the queue \"" +
+					queueURL + "\", see nested exception for more details",
 					queueURL, null, e);
 
-		}		
+		}
 	}
 
 
@@ -162,5 +172,5 @@ public class AmazonSQSOperationsImpl implements AmazonSQSOperations {
 	public void setMessageTransformer(AmazonSQSMessageTransformer messageTransformer) {
 		Assert.notNull(messageTransformer,"Provide a non null Message Transformer");
 		this.messageTransformer = messageTransformer;
-	}	
+	}
 }

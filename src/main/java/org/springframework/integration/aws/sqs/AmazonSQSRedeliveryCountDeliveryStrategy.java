@@ -21,46 +21,49 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * The strategy where we specify a max number of attempts of re delivery 
+ * The strategy where we specify a max number of attempts of re delivery
  * @author Amol Nayak
  *
  */
 public class AmazonSQSRedeliveryCountDeliveryStrategy implements
 		AmazonSQSMessageDeliveryStrategy {
 
-	private int maxRedeliveryAttempts;
-	private ConcurrentHashMap<String, Lock> locks = new ConcurrentHashMap<String, Lock>();
-	private ConcurrentHashMap<String, AtomicInteger> redeliveryCount = new ConcurrentHashMap<String, AtomicInteger>();
-	
+	private final int maxRedeliveryAttempts;
+	private final ConcurrentHashMap<String, Lock> locks = new ConcurrentHashMap<String, Lock>();
+	private final ConcurrentHashMap<String, AtomicInteger> redeliveryCount = new ConcurrentHashMap<String, AtomicInteger>();
+
 	/**
 	 * Constructor used to initialize with the max number of re delivery attempts
 	 * @param maxRedeliveryAttempts
 	 */
-	public AmazonSQSRedeliveryCountDeliveryStrategy(int maxRedeliveryAttempts) {		
+	public AmazonSQSRedeliveryCountDeliveryStrategy(int maxRedeliveryAttempts) {
 		this.maxRedeliveryAttempts = maxRedeliveryAttempts;
 	}
 
 	/* (non-Javadoc)
 	 * @see org.springframework.integration.aws.sqs.AmazonSQSMessageDeliveryStrategy#canRedeliver(java.lang.String)
 	 */
-	
-	public boolean canRedeliver(String messageId) {		
+
+	public boolean canRedeliver(String messageId) {
 		return redeliveryCount.get(messageId).intValue() < maxRedeliveryAttempts;
 	}
 
 	/* (non-Javadoc)
 	 * @see org.springframework.integration.aws.sqs.AmazonSQSMessageDeliveryStrategy#notifyFailure(java.lang.String)
 	 */
-	
+
 	public void notifyFailure(String messageId) {
 		if(!locks.containsKey(messageId))
 			locks.putIfAbsent(messageId, new ReentrantLock());
 		Lock lock = locks.get(messageId);
 		lock.lock();
-		try {			
+		try {
 			if(!redeliveryCount.containsKey(messageId)) {
 				AtomicInteger failureCount = new AtomicInteger(1);
-				redeliveryCount.put(messageId, failureCount);
+				failureCount = redeliveryCount.putIfAbsent(messageId, failureCount);
+				if(failureCount != null) {
+					failureCount.incrementAndGet();
+				}
 			} else {
 				redeliveryCount.get(messageId).incrementAndGet();
 			}
@@ -72,13 +75,13 @@ public class AmazonSQSRedeliveryCountDeliveryStrategy implements
 	/* (non-Javadoc)
 	 * @see org.springframework.integration.aws.sqs.AmazonSQSMessageDeliveryStrategy#notifySuccess(java.lang.String)
 	 */
-	
+
 	public void notifySuccess(String messageId) {
 		cleanup(messageId);
-	}	
-	
-	
-	
+	}
+
+
+
 	public void cleanup(String messageId) {
 		//cleanup for the message id
 		if(locks.containsKey(messageId)) {
@@ -91,13 +94,13 @@ public class AmazonSQSRedeliveryCountDeliveryStrategy implements
 				lock.unlock();
 			}
 		}
-		
+
 	}
 
 	public int getFailureCount(String messageId) {
 		if(redeliveryCount.containsKey(messageId)) {
 			return redeliveryCount.get(messageId).get();
-		} else 
+		} else
 			return -1;
 	}
 
