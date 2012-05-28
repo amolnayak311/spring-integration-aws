@@ -34,11 +34,13 @@ public class AmazonSQSInboundChannelAdapterParser extends
 	private static final String IS_TRANSACTIONAL = "transactional";
 	private static final String MAX_REDELIVERY_ATTEMPTS = "max-redelivery-attempts";
 	private static final String SQS_QUEUE = "sqs-queue";
-	
+	private static final String SQS_OPERATIONS = "sqs-operations";
+
 	/* (non-Javadoc)
 	 * @see org.springframework.integration.config.xml.AbstractPollingInboundChannelAdapterParser#parseSource(org.w3c.dom.Element, org.springframework.beans.factory.xml.ParserContext)
 	 */
-	
+
+	@Override
 	protected BeanMetadataElement parseSource(Element element, ParserContext parserContext) {
 		String awsCredentials = registerAmazonWSCredentials(element, parserContext);
 		//Mandated at xsd level, so has to be present
@@ -46,9 +48,10 @@ public class AmazonSQSInboundChannelAdapterParser extends
 		BeanDefinitionBuilder builder = BeanDefinitionBuilder
 										.genericBeanDefinition(AmazonSQSMessageSource.class)
 										.addConstructorArgReference(awsCredentials)
-										.addConstructorArgValue(sqsQueue);		
+										.addConstructorArgValue(sqsQueue);
 		IntegrationNamespaceUtils.setValueIfAttributeDefined(builder, element, IS_TRANSACTIONAL);
 		IntegrationNamespaceUtils.setValueIfAttributeDefined(builder, element,MAX_REDELIVERY_ATTEMPTS);
+		IntegrationNamespaceUtils.setReferenceIfAttributeDefined(builder, element, SQS_OPERATIONS);
 		return builder.getBeanDefinition();
 	}
 }

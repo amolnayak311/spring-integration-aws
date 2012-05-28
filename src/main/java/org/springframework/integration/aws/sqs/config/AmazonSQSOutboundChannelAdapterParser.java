@@ -35,25 +35,29 @@ import org.w3c.dom.Element;
  */
 public class AmazonSQSOutboundChannelAdapterParser extends
 		AbstractAWSOutboundChannelAdapterParser {
-	
-	private static final String DEFAULT_SQS_QUEUE = "default-sqs-queue";
+
+	private static final String DEFAULT_SQS_QUEUE 	= "default-sqs-queue";
 	private static final String DESTINATION_QUEUE_EXPRESSION = "destination-queue-expression";
 	private static final String VERIFY_SENT_MESSAGE = "verify-sent-message";
-	private static final String DESTINATION_QUEUE = "destination-queue";
+	private static final String DESTINATION_QUEUE 	= "destination-queue";
+	private static final String SQS_OPERATIONS 		= "sqs-operations";
 
-	
-	
-	protected Class<? extends MessageHandler> getMessageHandlerImplementation() {		
+
+
+	@Override
+	protected Class<? extends MessageHandler> getMessageHandlerImplementation() {
 		return AmazonSQSMessageHandler.class;
 	}
 
-	
+
+	@Override
 	protected void processBeanDefinition(BeanDefinitionBuilder builder,
 			String awsCredentialsGeneratedName, Element element,
 			ParserContext context) {
 		//lets see the 3 attributes of the bean
 		//defaultSQSQueue, destinationQueueProcessor, verifySentMessage
-		IntegrationNamespaceUtils.setValueIfAttributeDefined(builder, element, DEFAULT_SQS_QUEUE, "defaultSQSQueue");
+		String defaultSQSDestination = element.getAttribute(DEFAULT_SQS_QUEUE);
+		builder.addConstructorArgValue(defaultSQSDestination);
 		String destinationQueueExpression = element.getAttribute(DESTINATION_QUEUE_EXPRESSION);
 		String destinationQueue = element.getAttribute(DESTINATION_QUEUE);
 		boolean hasDestinationQueueExpression = StringUtils.hasText(destinationQueueExpression);
@@ -76,6 +80,7 @@ public class AmazonSQSOutboundChannelAdapterParser extends
 		}
 		builder.addPropertyValue("destinationQueueExpression", expression);
 		IntegrationNamespaceUtils.setValueIfAttributeDefined(builder, element, VERIFY_SENT_MESSAGE);
+		IntegrationNamespaceUtils.setReferenceIfAttributeDefined(builder, element, SQS_OPERATIONS);
 	}
 
 }

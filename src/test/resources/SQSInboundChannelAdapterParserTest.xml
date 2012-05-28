@@ -8,8 +8,8 @@
 	http://www.springframework.org/schema/integration/aws/sqs http://www.springframework.org/schema/integration/aws/sqs/spring-integration-aws-sqs-2.1.xsd
 	http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-2.1.xsd">
 	
-	<import resource="common-resources.xml"/>
-
+	<import resource="common-resources.xml"/>	
+	
 	<integration:channel id="inboundSQSAdapter"/>
 	
 	<aws-sqs:inbound-channel-adapter id="inboundChannelAdapter"
@@ -17,12 +17,15 @@
 		channel="inboundSQSAdapter"
 		sqs-queue="https://queue.amazonaws.com/439454740675/MyTestQueue"
 		transactional="true"
-		max-redelivery-attempts="3">
+		max-redelivery-attempts="3"
+		sqs-operations="dummyOperation">
 			<integration:poller fixed-rate="5000">
 				<integration:transactional isolation="DEFAULT" propagation="REQUIRED" 
 						transaction-manager="txManager"/>
 			</integration:poller>
 	</aws-sqs:inbound-channel-adapter>	
 	
-	<bean id="txManager" class="org.springframework.integration.common.DummyTransactionManager"/>		
+	<bean id="txManager" class="org.springframework.integration.common.DummyTransactionManager"/>
+	
+	<bean id="dummyOperation" class="org.springframework.integration.aws.sqs.config.DummyAmazonSQSOperation"/>		
 </beans>

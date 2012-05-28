@@ -38,35 +38,37 @@ import org.springframework.util.StringUtils;
  *
  */
 public class AmazonSQSMessageHandler extends AbstractMessageHandler {
-	
-	private AmazonWSCredentials credentials;
-	private AmazonSQSOperations sqsClient;
-	private String defaultSQSQueue;
+
+	private final AmazonWSCredentials credentials;
+	private AmazonSQSOperations sqsOperations;
+	private final String defaultSQSQueue;
 	private ExpressionEvaluatingMessageProcessor<String> destinationQueueProcessor;
 	private boolean verifySentMessages;
-	
+
 	/**
-	 * The constructor accepting the AWS credentials and the default queue on which to 
+	 * The constructor accepting the AWS credentials and the default queue on which to
 	 * publish the message on
 	 * @param credentials
 	 */
-	public AmazonSQSMessageHandler(AmazonWSCredentials credentials,String defaultSQSQueue) {		
+	public AmazonSQSMessageHandler(AmazonWSCredentials credentials,String defaultSQSQueue) {
 		this.credentials = credentials;
 		this.defaultSQSQueue = defaultSQSQueue;
-		sqsClient = new AmazonSQSOperationsImpl(credentials);
 	}
-	
-	
-	
-	
+
+
+
+
+	@Override
 	protected void onInit() throws Exception {
 		Assert.notNull(destinationQueueProcessor, "Destination queue processor must be non null");
+		if(sqsOperations == null)
+			sqsOperations = new AmazonSQSOperationsImpl(credentials);
 	}
 
 
 
 	/**
-	 * The constructor accepting the AmazonWCredentials only, the default queue 
+	 * The constructor accepting the AmazonWCredentials only, the default queue
 	 * will not be present in this case
 	 * @param credentials
 	 */
@@ -84,7 +86,7 @@ public class AmazonSQSMessageHandler extends AbstractMessageHandler {
 		}
 		return service;
 	}
-	
+
 	/**
 	 * This Expression will be evaluated against the message to determine the destination queue
 	 * if no queue is determined after evaluating the expression, the default output queue
@@ -94,20 +96,34 @@ public class AmazonSQSMessageHandler extends AbstractMessageHandler {
 	public void setDestinationQueueExpression(Expression expression) {
 		destinationQueueProcessor = new ExpressionEvaluatingMessageProcessor<String>(expression);
 	}
-	
-	
-	
+
+
+
 	/**
-	 *This will indicate if the outgoing Message content's MD5 sum is to be validated against the 
-	 *MD5 sum returned by the Amazon SQS.  
+	 *This will indicate if the outgoing Message content's MD5 sum is to be validated against the
+	 *MD5 sum returned by the Amazon SQS.
 	 */
 	public void setVerifySentMessages(boolean verifySentMessages) {
 		this.verifySentMessages = verifySentMessages;
 	}
 
-	
+
+
+	/**
+	 * Lets the end user specify a custom implementation of {@link AmazonSQSOperations}
+	 *
+	 * @param sqsOperations The implementation of {@link AmazonSQSOperations}
+	 */
+	public void setSqsOperations(AmazonSQSOperations sqsOperations) {
+		this.sqsOperations = sqsOperations;
+	}
+
+
+
+
+	@Override
 	@SuppressWarnings("unchecked")
-	protected void handleMessageInternal(Message<?> message) throws Exception {		 
+	protected void handleMessageInternal(Message<?> message) throws Exception {
 		Object payload = message.getPayload();
 		String destinationQueue = destinationQueueProcessor.processMessage(message);
 		if(!StringUtils.hasText(destinationQueue)) {
@@ -124,57 +140,57 @@ public class AmazonSQSMessageHandler extends AbstractMessageHandler {
 		AmazonSQSMessage sqsMsg = new AmazonSQSMessage();
 		Map<String, String> messageAttributes = null;
 		try {
-			messageAttributes = 
+			messageAttributes =
 				(Map<String, String>)message.getHeaders().get(AmazonSQSMessageHeaders.MESSAGE_ATTRIBUTES);
-		} catch (ClassCastException e) {			
+		} catch (ClassCastException e) {
 			logger.warn("Message attributes expected of type Map<String,String>, ignoring message attributes header" +
 					"see root cause exception for more details", e);
 		}
 		sqsMsg.setMessageAttributes(messageAttributes);
 		if(payload instanceof String) {
-			messagePayload = (String)payload;			
+			messagePayload = (String)payload;
 			sqsMsg.setMessagePayload(messagePayload);
 			sqsMsg.setOriginalMessagePayloadType(String.class);
-			sendMessageResponse = sqsClient.sendMessage(destinationQueue, sqsMsg);
-		} else {			
+			sendMessageResponse = sqsOperations.sendMessage(destinationQueue, sqsMsg);
+		} else {
 			ConversionService conversionService = getPayloadConversionService();
 			if(conversionService.canConvert(payload.getClass(), String.class)) {
 				messagePayload = conversionService.convert(payload, String.class);
 				sqsMsg.setMessagePayload(messagePayload);
 				sqsMsg.setOriginalMessagePayloadType(payload.getClass());
-				sendMessageResponse = 
-					sqsClient.sendMessage(destinationQueue, sqsMsg);
+				sendMessageResponse =
+					sqsOperations.sendMessage(destinationQueue, sqsMsg);
 			} else {
 				throw new AmazonSQSException(credentials.getAccessKey(),
-						"No suitable converter found to transform object of class " 
+						"No suitable converter found to transform object of class "
 						+ payload.getClass() + " to String",destinationQueue,payload);
 			}
 			if(logger.isDebugEnabled())
 				logger.debug("Message id is " + sendMessageResponse.getMessageId());
-			
+
 			if(verifySentMessages) {
-				//TODO: We need have the MD5 sum of the exact String payload sent to the SQS and 
+				//TODO: We need have the MD5 sum of the exact String payload sent to the SQS and
 				//Not the payload we set here. Let the SQS Client calculate the MD of payload
 				//here return it to us.
-				//Here we need to calculate the MD5 sum of the Message being sent, and compare that 
+				//Here we need to calculate the MD5 sum of the Message being sent, and compare that
 				//with the MD5 digest of the response received
 				String serverMD5Sum = sendMessageResponse.getResponseMD5Sum();
 				if(logger.isDebugEnabled())
 					logger.debug("Server MD5 Sum is  " + serverMD5Sum);
-				
+
 //				String clientSideMD5Hash = AmazonWSCommonUtils.encodeHex(
 //						AmazonWSCommonUtils.getContentsMD5AsBytes(messagePayload));
 //				if(logger.isDebugEnabled())
 //					logger.debug("Computed client side MD5 digest is " + clientSideMD5Hash);
-//				
+//
 //				if(clientSideMD5Hash.equals(serverMD5Sum)) {
 //					if(logger.isDebugEnabled())
 //						logger.debug("Client side MD5 sum matched with that returned from server");
 //				} else {
-//					logger.warn("client side MD5 \""+ clientSideMD5Hash + 
+//					logger.warn("client side MD5 \""+ clientSideMD5Hash +
 //							"\" didnt match with the server side MD5 sum \"" + serverMD5Sum + "\"");
 //					//We possibly cannot delete the message here,
-//				}				
+//				}
 			}
 		}
 	}
