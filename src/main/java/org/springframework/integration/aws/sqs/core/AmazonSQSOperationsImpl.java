@@ -21,11 +21,13 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.integration.aws.core.AbstractAmazonWSClientFactory;
 import org.springframework.integration.aws.core.AmazonWSClientFactory;
 import org.springframework.integration.aws.core.AmazonWSCredentials;
 import org.springframework.integration.aws.core.AmazonWSOperationException;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.sqs.AmazonSQSClient;
@@ -41,7 +43,7 @@ import com.amazonaws.services.sqs.model.SendMessageResult;
  * @author Amol Nayak
  *
  */
-public class AmazonSQSOperationsImpl implements AmazonSQSOperations {
+public class AmazonSQSOperationsImpl implements AmazonSQSOperations,InitializingBean {
 
 	private final Log logger = LogFactory.getLog(AmazonSQSOperationsImpl.class);
 
@@ -50,6 +52,30 @@ public class AmazonSQSOperationsImpl implements AmazonSQSOperations {
 	private AmazonSQSMessageTransformer messageTransformer = new AmazonSQSMessageJSONTransformer();
 
 	private AmazonWSClientFactory<AmazonSQSClient> clientFactory;
+
+	private boolean checkSnsNotification;
+
+	private String snsHeaderPrefix;
+
+
+
+	public void afterPropertiesSet() throws Exception {
+		if(checkSnsNotification) {
+			if(AbstractSQSMessageTransformer.class.isAssignableFrom(messageTransformer.getClass())) {
+				AbstractSQSMessageTransformer transformer = (AbstractSQSMessageTransformer)messageTransformer;
+				transformer.setCheckSNSNotification(true);
+				if(StringUtils.hasText(snsHeaderPrefix)) {
+					transformer.setSnsHeaderPrefix(snsHeaderPrefix);
+				}
+			}
+			else {
+				logger.warn("checkSnsNotification and/or snsHeaderPrefix specified, but " +
+						"the transformer is not an instance of AbstractSQSMessageTransformer, ignoring these attributes");
+			}
+		}
+	}
+
+
 
 	/**
 	 * The default constructor
@@ -173,4 +199,27 @@ public class AmazonSQSOperationsImpl implements AmazonSQSOperations {
 		Assert.notNull(messageTransformer,"Provide a non null Message Transformer");
 		this.messageTransformer = messageTransformer;
 	}
+
+
+	/**
+	 * Sets whether we are interested in receiving notifications SNS or not. If true
+	 * the incoming payload will be checked first if it is a notification from SNS
+	 *
+	 * @param checkSnsNotification
+	 */
+	public void setCheckSnsNotification(boolean checkSnsNotification) {
+		this.checkSnsNotification = checkSnsNotification;
+	}
+
+
+	/**
+	 * Relevant if <i>checkSnsNotification</i> is set to true. This is the prefix for all
+	 * the SNS attributes (except "Message") which will be added as header to the message
+	 * @param snsHeaderPrefix
+	 */
+	public void setSnsHeaderPrefix(String snsHeaderPrefix) {
+		this.snsHeaderPrefix = snsHeaderPrefix;
+	}
+
+
 }

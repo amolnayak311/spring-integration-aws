@@ -26,7 +26,9 @@ import org.springframework.integration.aws.TestUtils;
 import org.springframework.integration.aws.sqs.AmazonSQSMessageDeliveryStrategy;
 import org.springframework.integration.aws.sqs.AmazonSQSMessageSource;
 import org.springframework.integration.aws.sqs.AmazonSQSRedeliveryCountDeliveryStrategy;
+import org.springframework.integration.aws.sqs.core.AmazonSQSMessageTransformer;
 import org.springframework.integration.aws.sqs.core.AmazonSQSOperations;
+import org.springframework.integration.aws.sqs.core.AmazonSQSOperationsImpl;
 import org.springframework.integration.endpoint.SourcePollingChannelAdapter;
 
 /**
@@ -37,12 +39,14 @@ import org.springframework.integration.endpoint.SourcePollingChannelAdapter;
 public class AmazonSQSInboundChannelAdapterParserTest {
 
 	private SourcePollingChannelAdapter consumer;
+	private SourcePollingChannelAdapter consumer1;
 	private ClassPathXmlApplicationContext ctx;
 
 	@Before
 	public void setup() {
 		ctx = new ClassPathXmlApplicationContext("classpath:SQSInboundChannelAdapterParserTest.xml");
 		consumer = ctx.getBean("inboundChannelAdapter",SourcePollingChannelAdapter.class);
+		consumer1 = ctx.getBean("inboundChannelAdapterTwo", SourcePollingChannelAdapter.class);
 	}
 
 	@After
@@ -54,7 +58,9 @@ public class AmazonSQSInboundChannelAdapterParserTest {
 	public void testSQSInboundChannelAdapterParser() {
 		AmazonSQSMessageSource source =
 			TestUtils.getPropertyValue(consumer, "source", AmazonSQSMessageSource.class);
-		assertNotNull(source);
+		AmazonSQSMessageSource source1 =
+			TestUtils.getPropertyValue(consumer1, "source", AmazonSQSMessageSource.class);
+		assertNotNull(source1);
 		String sqsQueue = TestUtils.getPropertyValue(source, "sqsQueue", String.class);
 		assertEquals("https://queue.amazonaws.com/439454740675/MyTestQueue", sqsQueue);
 		assertEquals(true, TestUtils.getPropertyValue(source, "isTransactional", Boolean.class));
@@ -65,6 +71,15 @@ public class AmazonSQSInboundChannelAdapterParserTest {
 				redeliveryStrategy.getClass().getName());
 		assertEquals(DummyAmazonSQSOperation.class.getName(),
 						TestUtils.getPropertyValue(source, "sqsOperations", AmazonSQSOperations.class).getClass().getName());
+
+		assertEquals(AmazonSQSOperationsImpl.class.getName(),
+				TestUtils.getPropertyValue(source1, "sqsOperations", AmazonSQSOperations.class).getClass().getName());
+		assertEquals(DummySQSMessageTransformer.class.getName(),
+				TestUtils.getPropertyValue(source1, "sqsOperations.messageTransformer", AmazonSQSMessageTransformer.class)
+				.getClass().getName());
+		assertEquals(true,
+				TestUtils.getPropertyValue(source1, "sqsOperations.messageTransformer.checkSNSNotification", Boolean.class).booleanValue());
+		assertEquals("SNS_", TestUtils.getPropertyValue(source1, "sqsOperations.messageTransformer.snsHeaderPrefix", String.class));
 
 	}
 }

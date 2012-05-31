@@ -21,12 +21,10 @@ import java.util.Map;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.integration.Message;
-
 import org.springframework.integration.aws.core.AmazonWSCredentials;
 import org.springframework.integration.aws.sqs.core.AmazonSQSException;
 import org.springframework.integration.aws.sqs.core.AmazonSQSMessage;
 import org.springframework.integration.aws.sqs.core.AmazonSQSOperations;
-import org.springframework.integration.aws.sqs.core.AmazonSQSOperationsImpl;
 import org.springframework.integration.context.IntegrationObjectSupport;
 import org.springframework.integration.core.MessageSource;
 import org.springframework.integration.support.MessageBuilder;
@@ -37,107 +35,108 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
- * The MessageSource that would be used by the inbound SQS channel adapter 
+ * The MessageSource that would be used by the inbound SQS channel adapter
  * @author Amol Nayak
  *
  */
 public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 		MessageSource<Object> {
 
-	
-	private AmazonWSCredentials credentials;
+
+	private final AmazonWSCredentials credentials;
 	private AmazonSQSOperations sqsOperations;
-	private String sqsQueue;
+	private final String sqsQueue;
 	private boolean isTransactional;
 	private Integer maxRedeliveryAttempts;
-	
+
+
 	//By default, no redelivery
 	private AmazonSQSMessageDeliveryStrategy redeliveryStrategy
 						= new AmazonSQSNoRedeliveryMessageDeliveryStrategy();
-	
-	
-	
+
+
+
 	public AmazonSQSMessageSource(AmazonWSCredentials credentials,String sqsQueue) {
 		Assert.notNull(credentials,"Provide non null AWS credentials");
 		this.credentials = credentials;
 		Assert.isTrue(StringUtils.hasText(sqsQueue), "Provide a non null, non empty queue");
 		this.sqsQueue = sqsQueue;
-		
-	}	
 
-	
+	}
+
+
+	@Override
 	protected void onInit() throws Exception {
 		if(isTransactional && maxRedeliveryAttempts > 0)
 			redeliveryStrategy = new AmazonSQSRedeliveryCountDeliveryStrategy(maxRedeliveryAttempts);
-		
-		if(sqsOperations == null)
-			sqsOperations = new AmazonSQSOperationsImpl(credentials);
 	}
 
 	/* (non-Javadoc)
 	 * @see org.springframework.integration.core.MessageSource#receive()
 	 */
-	
+
 	public Message<Object> receive() {
-		if(isTransactional && 
+		if(isTransactional &&
 				(!TransactionSynchronizationManager.isActualTransactionActive()
-				|| TransactionSynchronizationManager.isCurrentTransactionReadOnly())) 
-			throw new AmazonSQSException(credentials.getAccessKey(), 
+				|| TransactionSynchronizationManager.isCurrentTransactionReadOnly()))
+			throw new AmazonSQSException(credentials.getAccessKey(),
 					"Expecting an incoming non read only transaction while reading the message from SQS Queue", sqsQueue, null);
 		//We will read just one message as this is invoked the max messages per poll will
-		//be handled by AbstractPollingEndpoint's Poller which will invoke the call method on the 
+		//be handled by AbstractPollingEndpoint's Poller which will invoke the call method on the
 		//Callable method max number of messages per poll times
 		Collection<AmazonSQSMessage> messages;
 		try {
 			messages = sqsOperations.receiveMessages(sqsQueue, 1);
 		} catch (RuntimeException e) {
-			logger.error("Caught Exception while receiving mesage",e);			
+			logger.error("Caught Exception while receiving mesage",e);
 			throw e;
-			
+
 		}
-		
+
 		if(!messages.isEmpty()) {
-			AmazonSQSMessage sqsMessage = messages.iterator().next();	//Since we will receive just one message				
+			AmazonSQSMessage sqsMessage = messages.iterator().next();	//Since we will receive just one message
 			if(isTransactional) {
 				//If transaction is present, register a Synchronization
 				final String receiptHandle = sqsMessage.getReceiptHandle();
 				final String messageId = sqsMessage.getMessageId();
 				TransactionSynchronizationManager
 				.registerSynchronization(new TransactionSynchronizationAdapter() {
-					
+
+					@Override
 					public void beforeCommit(boolean readOnly) {
 						if(!readOnly) {
 							//Transaction successfully committing, delete message now
 							//NOTE: If the transaction is longer than the visibility timeout of
-							//the message, then the message would possibly be consumed by some 
-							//other consumer too.								
+							//the message, then the message would possibly be consumed by some
+							//other consumer too.
 							sqsOperations.deleteMessage(receiptHandle, sqsQueue);
 						} else {
-							//Should never reach here as we would have already thrown an exception if the 
+							//Should never reach here as we would have already thrown an exception if the
 							//transaction is read only
 							if(logger.isInfoEnabled())
-								logger.info("Not deleting the message with receipt " + receiptHandle 
+								logger.info("Not deleting the message with receipt " + receiptHandle
 										+ " as the transaction is read only");
 						}
 						redeliveryStrategy.notifySuccess(messageId);
 					}
 
-					
+
+					@Override
 					public void afterCompletion(int status) {
 						if(status == TransactionSynchronization.STATUS_ROLLED_BACK) {
 							if(!redeliveryStrategy.canRedeliver(messageId)) {
 								if(logger.isInfoEnabled()) {
 									if(redeliveryStrategy instanceof AmazonSQSRedeliveryCountDeliveryStrategy) {
-										AmazonSQSRedeliveryCountDeliveryStrategy strat = 
+										AmazonSQSRedeliveryCountDeliveryStrategy strat =
 											(AmazonSQSRedeliveryCountDeliveryStrategy)redeliveryStrategy;
-										logger.info("Deleting message with message id " + messageId + 
-												" from SQS after " + strat.getFailureCount(messageId) 
+										logger.info("Deleting message with message id " + messageId +
+												" from SQS after " + strat.getFailureCount(messageId)
 												+ " unsuccessful of attempts to receive");
 									}
 								}
 								sqsOperations.deleteMessage(receiptHandle, sqsQueue);
 								redeliveryStrategy.cleanup(messageId);
-							}								
+							}
 						}
 					}
 				});
@@ -150,7 +149,7 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 					return buildMessage(sqsMessage, messagePayload);
 				}else if(convService.canConvert(String.class, originalPayloadType)) {
 					try {
-						Object convertedPayload = 
+						Object convertedPayload =
 							convService.convert(messagePayload, originalPayloadType);
 						return buildMessage(sqsMessage, convertedPayload);
 					} catch (RuntimeException e) {
@@ -163,14 +162,14 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 					if(isTransactional)
 						redeliveryStrategy.notifyFailure(sqsMessage.getMessageId());
 					throw new AmazonSQSException(credentials.getAccessKey(),
-							"Cannot convert from the source payload type " + originalPayloadType 
+							"Cannot convert from the source payload type " + originalPayloadType
 							+ " to type String",sqsQueue,messagePayload);
 				}
 			}finally {
 				if(!isTransactional)
 					sqsOperations.deleteMessage(sqsMessage.getReceiptHandle(), sqsQueue);
-				
-					
+
+
 			}
 		}
 		return null;
@@ -186,20 +185,20 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 	@SuppressWarnings({"rawtypes","unchecked"})
 	private Message<Object> buildMessage(AmazonSQSMessage sqsMessage,
 			Object convertedPayload) {
-		Map<String, String> attributes = sqsMessage.getMessageAttributes();		
+		Map<String, String> attributes = sqsMessage.getMessageAttributes();
 		MessageBuilder builder = MessageBuilder
 		.withPayload(convertedPayload)
 		.setHeader(AmazonSQSMessageHeaders.SERVER_SIDE_PAYLOAD_MD5, sqsMessage.getMD5OfBody())
 		.setHeader(AmazonSQSMessageHeaders.MESSAGE_ID, sqsMessage.getMessageId())
 		.setHeader(AmazonSQSMessageHeaders.MESSAGE_RECEIPT_HANDLE, sqsMessage.getReceiptHandle());
-		
+
 		if(attributes != null && !attributes.isEmpty())
 			builder.setHeader(AmazonSQSMessageHeaders.MESSAGE_ATTRIBUTES, attributes);
-		
+
 		return builder.build();
 	}
 
-	//TODO: This is duplicated and not thread safe, if two threads find the service as null 
+	//TODO: This is duplicated and not thread safe, if two threads find the service as null
 	private ConversionService getPayloadConversionService() {
 		ConversionService service = getConversionService();
 		if(service == null) {
@@ -212,9 +211,9 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 
 
 	/**
-	 * Indicates whether the adapter can participate in an incoming transaction. 
-	 * if the adapter can, then the message is deleted from the queue only if the 
-	 * transaction successfully commits, else the message is deleted immediately 
+	 * Indicates whether the adapter can participate in an incoming transaction.
+	 * if the adapter can, then the message is deleted from the queue only if the
+	 * transaction successfully commits, else the message is deleted immediately
 	 * after the message is read
 	 * @return
 	 */
@@ -238,7 +237,7 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 	public AmazonSQSMessageDeliveryStrategy getRedeliveryStrategy() {
 		return redeliveryStrategy;
 	}
-	
+
 	/**
 	 * Sets a particular redelivery strategy for the adapter
 	 * @param redeliveryStrategy
@@ -257,7 +256,7 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 	public Integer getMaxRedeliveryAttempts() {
 		return maxRedeliveryAttempts;
 	}
-	
+
 	/**
 	 * Sets the max redelivery attempts
 	 * @param maxRedeliveryAttempts
@@ -280,7 +279,7 @@ public class AmazonSQSMessageSource extends IntegrationObjectSupport implements
 	/**
 	 * Sets the implementation of the {@link AmazonSQSOperations} that will be used to perform the SQS
 	 * operations
-	 * 
+	 *
 	 */
 	public void setSqsOperations(AmazonSQSOperations sqsOperations) {
 		this.sqsOperations = sqsOperations;

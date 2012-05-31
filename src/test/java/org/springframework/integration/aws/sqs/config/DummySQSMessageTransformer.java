@@ -15,40 +15,26 @@
  */
 package org.springframework.integration.aws.sqs.config;
 
-import java.util.Collection;
-
+import org.springframework.integration.aws.sqs.core.AbstractSQSMessageTransformer;
 import org.springframework.integration.aws.sqs.core.AmazonSQSMessage;
-import org.springframework.integration.aws.sqs.core.AmazonSQSMessageTransformer;
-import org.springframework.integration.aws.sqs.core.AmazonSQSOperations;
-import org.springframework.integration.aws.sqs.core.AmazonSQSSendMessageResponse;
 
 /**
- * The dummy implementation of the SQS Operations
+ * The dummy SQS Message transformer that would be used in the unit test cases
  * @author Amol Nayak
  *
  */
-public class DummyAmazonSQSOperation implements AmazonSQSOperations {
+public class DummySQSMessageTransformer extends AbstractSQSMessageTransformer {
 
-	public AmazonSQSSendMessageResponse sendMessage(String queueURL,
-			AmazonSQSMessage message) {
-
+	@Override
+	protected String serializeInternal(AmazonSQSMessage message)
+			throws Exception {
 		return null;
 	}
 
-	public Collection<AmazonSQSMessage> receiveMessages(String queueURL,
-			int maxNumberOfMessages) {
-
+	@Override
+	protected AmazonSQSMessage deserializeInternal(String message)
+			throws Exception {
 		return null;
-	}
-
-	public void deleteMessage(String receiptHandle, String queueURL) {
-
-
-	}
-
-	public void setMessageTransformer(
-			AmazonSQSMessageTransformer messageTransformer) {
-
 	}
 
 

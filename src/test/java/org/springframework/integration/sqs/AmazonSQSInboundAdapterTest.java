@@ -53,32 +53,32 @@ public class AmazonSQSInboundAdapterTest {
 	@Autowired
 	@Qualifier("inboundSQSAdapter")
 	private SubscribableChannel subscribableChannel;
-	
+
 	@Autowired
 	@Qualifier("sqsOutboundChannel")
 	private MessageChannel channel;
-	
+
 	@Autowired
 	@Qualifier("errorChannel")
 	private PublishSubscribeChannel errorChannel;
-	
+
 	private AmazonSQSOperations operations;
-	
+
 	@Autowired
 	@Qualifier("props")
 	private Properties props;
-	
-	
+
+
 
 	@Before
 	public void init() {
-		AmazonWSCredentials credentials = new BasicAWSCredentials										
+		AmazonWSCredentials credentials = new BasicAWSCredentials
 		(props.getProperty("aws.access.key"), props.getProperty("aws.secret.key"));
 		operations = new AmazonSQSOperationsImpl(credentials);
-		
+
 		errorChannel.subscribe(new MessageHandler() {
-			
-			
+
+
 			public void handleMessage(Message<?> message) throws MessagingException {
 				System.out.println("\n\nReceived Message over Error chnnel");
 				MessageHeaders headers = message.getHeaders();
@@ -88,12 +88,12 @@ public class AmazonSQSInboundAdapterTest {
 				}
 				Object payload = message.getPayload();
 				System.out.println("Message payload is " + payload + " of type " + payload.getClass());
-				
+
 			}
 		});
-		
-		subscribableChannel.subscribe(new MessageHandler() {			
-			
+
+		subscribableChannel.subscribe(new MessageHandler() {
+
 			public void handleMessage(Message<?> msg) throws MessagingException {
 				System.out.println("Received message with following Details:");
 				System.out.println("All Header values are:");
@@ -104,13 +104,13 @@ public class AmazonSQSInboundAdapterTest {
 				}
 				Object payload = msg.getPayload();
 				System.out.println("Message payload is " + payload + " of type " + payload.getClass());
-				
+
 			}
 		});
 	}
-	
-	@Test
-	public void sendCorrectMessage() {		
+
+	//@Test
+	public void sendCorrectMessage() {
 		System.out.println("\n\nSending Correct Integer message over the message channel");
 		Map<String, String> attributes = new HashMap<String, String>();
 		attributes.put("SENT_TIME", System.currentTimeMillis() + "");
@@ -120,8 +120,8 @@ public class AmazonSQSInboundAdapterTest {
 				.copyHeaders(headers)
 				.build());
 	}
-	
-	@Test
+
+	//@Test
 	public void sendGarbledMessage() {
 		System.out.println("\n\nSending garbled message");
 		AmazonSQSMessage msg = new AmazonSQSMessage();
@@ -129,7 +129,7 @@ public class AmazonSQSInboundAdapterTest {
 		msg.setMessagePayload("Some String");
 		operations.sendMessage(props.getProperty("sqs.queue"), msg);
 	}
-	
+
 	@Test
 	public void waitForever() throws Exception {
 		System.out.println("\n\nWaiting forever");

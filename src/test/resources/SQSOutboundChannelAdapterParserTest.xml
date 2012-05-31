@@ -18,7 +18,15 @@
 		default-sqs-queue="https://ap-southeast-1.queue.amazonaws.com/439454740675/APAC_TEST_QUEUE"
 		destination-queue="https://ap-southeast-1.queue.amazonaws.com/439454740675/APAC_TEST_QUEUE"
 		sqs-operations="sqsOperations"/>
+		
+	<aws-sqs:outbound-channel-adapter id="outboundAdapter1"
+		propertiesFile="classpath:awscredentials.properties" 
+		channel="sqsOutboundChannel"
+		default-sqs-queue="https://ap-southeast-1.queue.amazonaws.com/439454740675/APAC_TEST_QUEUE"
+		destination-queue="https://ap-southeast-1.queue.amazonaws.com/439454740675/APAC_TEST_QUEUE"
+		message-transformer="dummyTransformer"/>
 	
-	<bean id="sqsOperations" class="org.springframework.integration.aws.sqs.config.DummyAmazonSQSOperation"/>	
+	<bean id="sqsOperations" class="org.springframework.integration.aws.sqs.config.DummyAmazonSQSOperation"/>
+	<bean id="dummyTransformer"	 class="org.springframework.integration.aws.sqs.config.DummySQSMessageTransformer"/>	
 	  		
 </beans>

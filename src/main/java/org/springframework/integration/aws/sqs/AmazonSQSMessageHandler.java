@@ -25,7 +25,6 @@ import org.springframework.integration.aws.core.AmazonWSCredentials;
 import org.springframework.integration.aws.sqs.core.AmazonSQSException;
 import org.springframework.integration.aws.sqs.core.AmazonSQSMessage;
 import org.springframework.integration.aws.sqs.core.AmazonSQSOperations;
-import org.springframework.integration.aws.sqs.core.AmazonSQSOperationsImpl;
 import org.springframework.integration.aws.sqs.core.AmazonSQSSendMessageResponse;
 import org.springframework.integration.handler.AbstractMessageHandler;
 import org.springframework.integration.handler.ExpressionEvaluatingMessageProcessor;
@@ -61,8 +60,6 @@ public class AmazonSQSMessageHandler extends AbstractMessageHandler {
 	@Override
 	protected void onInit() throws Exception {
 		Assert.notNull(destinationQueueProcessor, "Destination queue processor must be non null");
-		if(sqsOperations == null)
-			sqsOperations = new AmazonSQSOperationsImpl(credentials);
 	}
 
 

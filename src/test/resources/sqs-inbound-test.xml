@@ -17,7 +17,9 @@
 		channel="inboundSQSAdapter"
 		sqs-queue="https://queue.amazonaws.com/439454740675/MyTestQueue"
 		transactional="true"
-		max-redelivery-attempts="3">
+		max-redelivery-attempts="3"
+		check-sns-notification="true"
+		sns-header-prefix="SNS_">
 			<integration:poller fixed-rate="5000">
 				<integration:transactional isolation="DEFAULT" propagation="REQUIRED" 
 						transaction-manager="txManager"/>

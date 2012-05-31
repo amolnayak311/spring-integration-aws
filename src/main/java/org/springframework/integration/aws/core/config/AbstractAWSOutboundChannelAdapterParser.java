@@ -43,10 +43,11 @@ public abstract class AbstractAWSOutboundChannelAdapterParser extends
 	/* (non-Javadoc)
 	 * @see org.springframework.integration.config.xml.AbstractOutboundChannelAdapterParser#parseConsumer(org.w3c.dom.Element, org.springframework.beans.factory.xml.ParserContext)
 	 */
+	@Override
 	protected final AbstractBeanDefinition parseConsumer(Element element,
-			ParserContext parserContext) {		
+			ParserContext parserContext) {
 		String awsCredentialsGeneratedName = registerAmazonWSCredentials(element,parserContext);
-		
+
 		BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(getMessageHandlerImplementation());
 		builder.addConstructorArgReference(awsCredentialsGeneratedName);
 		processBeanDefinition(builder,awsCredentialsGeneratedName,element,parserContext);
@@ -66,27 +67,27 @@ public abstract class AbstractAWSOutboundChannelAdapterParser extends
 		String propertiesFile = element.getAttribute(PROPERTIES_FILE);
 		String awsCredentialsGeneratedName;
 		if(StringUtils.hasText(propertiesFile)) {
-			Assert.isTrue(!StringUtils.hasText(accessKey) && !StringUtils.hasText(secretKey), 
+			Assert.isTrue(!StringUtils.hasText(accessKey) && !StringUtils.hasText(secretKey),
 			"When " + ACCESS_KEY + " and " + SECRET_KEY + " are specified, do not specify the " + PROPERTIES_FILE + " attribute");
-			BeanDefinitionBuilder builder = 
+			BeanDefinitionBuilder builder =
 				BeanDefinitionBuilder.genericBeanDefinition(PropertiesAWSCredentials.class);
 			builder.addConstructorArgValue(propertiesFile);
 			awsCredentialsGeneratedName = BeanDefinitionReaderUtils.registerWithGeneratedName(
-					builder.getBeanDefinition(), parserContext.getRegistry());			
+					builder.getBeanDefinition(), parserContext.getRegistry());
 		} else {
-			BeanDefinitionBuilder builder 
+			BeanDefinitionBuilder builder
 			= BeanDefinitionBuilder.genericBeanDefinition(BasicAWSCredentials.class);
 			builder.addConstructorArgValue(accessKey);
 			builder.addConstructorArgValue(secretKey);
 			awsCredentialsGeneratedName = BeanDefinitionReaderUtils.registerWithGeneratedName(
 					builder.getBeanDefinition(), parserContext.getRegistry());
-			
+
 		}
 		return awsCredentialsGeneratedName;
 	}
-	
+
 	protected abstract Class<? extends MessageHandler> getMessageHandlerImplementation();
-	
+
 	/**
 	 * The subclasses can override this method to set additional attributes
 	 * @param builder

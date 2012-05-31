@@ -149,6 +149,22 @@
 					</xsd:appinfo>
 				</xsd:annotation>
 			</xsd:attribute>
+			<xsd:attribute name="check-sns-notification" type="xsd:boolean" default="false">
+				<xsd:annotation>
+					<xsd:documentation>
+						The that indicates to the inbound adapter whether to check for the incoming 
+						SQS message for SNS notification. If true, the check will take place. 
+					</xsd:documentation>
+				</xsd:annotation>				
+			</xsd:attribute>
+			<xsd:attribute name="sns-header-prefix" type="xsd:string">
+				<xsd:annotation>
+					<xsd:documentation>
+						The attribute whose value will be prefixed to all the standard SNS JSON attributes
+						before being added to the AmazonSQSMessage's attributes 
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:attribute>
 		</xsd:complexType>
 	</xsd:element>			
 </xsd:schema>

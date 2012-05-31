@@ -16,6 +16,7 @@
 package org.springframework.integration.aws.sqs.config;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import org.junit.After;
 import org.junit.Before;
@@ -23,7 +24,9 @@ import org.junit.Test;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.integration.aws.TestUtils;
 import org.springframework.integration.aws.sqs.AmazonSQSMessageHandler;
+import org.springframework.integration.aws.sqs.core.AmazonSQSMessageTransformer;
 import org.springframework.integration.aws.sqs.core.AmazonSQSOperations;
+import org.springframework.integration.aws.sqs.core.AmazonSQSOperationsImpl;
 import org.springframework.integration.endpoint.EventDrivenConsumer;
 
 /**
@@ -37,11 +40,13 @@ public class AmazonSQSOutboundChannelAdapterParserTest {
 	private static final String SQS_DESTINATION = "https://ap-southeast-1.queue.amazonaws.com/439454740675/APAC_TEST_QUEUE";
 	private ClassPathXmlApplicationContext ctx;
 	private EventDrivenConsumer consumer;
+	private EventDrivenConsumer consumer1;
 
 	@Before
 	public void setup() {
 		ctx = new ClassPathXmlApplicationContext("classpath:SQSOutboundChannelAdapterParserTest.xml");
 		consumer = ctx.getBean("outboundAdapter",EventDrivenConsumer.class);
+		consumer1 = ctx.getBean("outboundAdapter1",EventDrivenConsumer.class);
 
 	}
 
@@ -57,6 +62,14 @@ public class AmazonSQSOutboundChannelAdapterParserTest {
 		assertEquals(SQS_DESTINATION, destinationString);
 		assertEquals(SQS_DESTINATION, TestUtils.getPropertyValue(handler, "defaultSQSQueue", String.class));
 		AmazonSQSOperations operations = TestUtils.getPropertyValue(handler, "sqsOperations",AmazonSQSOperations.class);
+		assertNotNull(operations);
 		assertEquals(DummyAmazonSQSOperation.class.getName(), operations.getClass().getName());
+		handler = TestUtils.getPropertyValue(consumer1, "handler", AmazonSQSMessageHandler.class);
+		operations = TestUtils.getPropertyValue(handler, "sqsOperations",AmazonSQSOperations.class);
+		assertNotNull(operations);
+		assertEquals(AmazonSQSOperationsImpl.class.getName(), operations.getClass().getName());
+		AmazonSQSMessageTransformer transformer = TestUtils.getPropertyValue(operations, "messageTransformer", AmazonSQSMessageTransformer.class);
+		assertNotNull(transformer);
+		assertEquals(DummySQSMessageTransformer.class.getName(), transformer.getClass().getName());
 	}
 }

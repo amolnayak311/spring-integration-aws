@@ -18,10 +18,12 @@ package org.springframework.integration.aws.sqs.config;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.BeanDefinitionReaderUtils;
 import org.springframework.beans.factory.xml.ParserContext;
 import org.springframework.expression.common.LiteralExpression;
 import org.springframework.integration.aws.core.config.AbstractAWSOutboundChannelAdapterParser;
 import org.springframework.integration.aws.sqs.AmazonSQSMessageHandler;
+import org.springframework.integration.aws.sqs.core.AmazonSQSOperationsImpl;
 import org.springframework.integration.config.ExpressionFactoryBean;
 import org.springframework.integration.config.xml.IntegrationNamespaceUtils;
 import org.springframework.integration.core.MessageHandler;
@@ -41,6 +43,7 @@ public class AmazonSQSOutboundChannelAdapterParser extends
 	private static final String VERIFY_SENT_MESSAGE = "verify-sent-message";
 	private static final String DESTINATION_QUEUE 	= "destination-queue";
 	private static final String SQS_OPERATIONS 		= "sqs-operations";
+	private static final String MESSAGE_TRANSFORMER = "message-transformer";
 
 
 
@@ -81,6 +84,26 @@ public class AmazonSQSOutboundChannelAdapterParser extends
 		builder.addPropertyValue("destinationQueueExpression", expression);
 		IntegrationNamespaceUtils.setValueIfAttributeDefined(builder, element, VERIFY_SENT_MESSAGE);
 		IntegrationNamespaceUtils.setReferenceIfAttributeDefined(builder, element, SQS_OPERATIONS);
-	}
+		String transformerRef = element.getAttribute(MESSAGE_TRANSFORMER);
+		boolean hasTransformerRef = StringUtils.hasText(transformerRef);
+		if(!element.hasAttribute(SQS_OPERATIONS)) {
+			BeanDefinitionBuilder sqsOpsBuilder =
+				BeanDefinitionBuilder.genericBeanDefinition(AmazonSQSOperationsImpl.class)
+				.addConstructorArgReference(awsCredentialsGeneratedName);
+			if(hasTransformerRef) {
+				sqsOpsBuilder.addPropertyReference("messageTransformer", transformerRef);
+			}
 
+			String sqsOps = BeanDefinitionReaderUtils.registerWithGeneratedName(sqsOpsBuilder.getBeanDefinition(),
+					context.getRegistry());
+			builder.addPropertyReference("sqsOperations", sqsOps);
+		}
+		else {
+			if(hasTransformerRef) {
+				throw new BeanDefinitionStoreException("Both the attributes,  \"sqs-operations\" and \"message-transformer\" are " +
+						"not supported together. Consider injecting the messageTransformer in the sqsOperation's bean definition" +
+						" and provide \"sqs-operations\" attribute only");
+			}
+		}
+	}
 }

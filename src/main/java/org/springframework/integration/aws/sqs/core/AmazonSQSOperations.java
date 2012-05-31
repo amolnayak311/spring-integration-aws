@@ -28,28 +28,37 @@ public interface AmazonSQSOperations {
 	 * Sends a message to the given queue URL with the given message payload
 	 * @param queueURL
 	 * @param message
-	 * @return the 
+	 * @return the
 	 */
 	AmazonSQSSendMessageResponse sendMessage(String queueURL,AmazonSQSMessage message);
-	
-	
+
+
 	/**
 	 * Reads messages from the given queue
-	 * @param queue 
+	 * @param queue
 	 * @param maxNumberOfMessages: The maximum number of messages to be read in one operation
 	 * @return The {@link Collection} of the {@link AmazonSQSMessage} read, the length will be
-	 * of maximum maxNumberOfMessages 
+	 * of maximum maxNumberOfMessages
 	 */
 	Collection<AmazonSQSMessage> receiveMessages(String queueURL,int maxNumberOfMessages);
-	
+
 	/**
 	 * Deletes the message with the given receipt handle.
 	 * NOTE: SQS requires to delete using the latest handle received from the receive,
 	 * however, even if we use a previously read message receipt, the message still gets
 	 * deleted
-	 * 
+	 *
 	 * @param receiptHandle
 	 * @param queueURL
 	 */
 	public void deleteMessage(String receiptHandle,String queueURL);
+
+
+	/**
+	 * The method that allows us to set the transformer that would be used to transform the {@link AmazonSQSMessage}
+	 * into an appropriate message and the message back to an instance of {@link AmazonSQSMessage} instance
+	 *
+	 * @param messageTransformer
+	 */
+	void setMessageTransformer(AmazonSQSMessageTransformer messageTransformer);
 }

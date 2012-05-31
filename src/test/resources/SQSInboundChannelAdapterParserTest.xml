@@ -18,14 +18,31 @@
 		sqs-queue="https://queue.amazonaws.com/439454740675/MyTestQueue"
 		transactional="true"
 		max-redelivery-attempts="3"
-		sqs-operations="dummyOperation">
+		sqs-operations="dummyOperation"
+		check-sns-notification="true">
 			<integration:poller fixed-rate="5000">
-				<integration:transactional isolation="DEFAULT" propagation="REQUIRED" 
+				<integration:transactional isolation="DEFAULT" propagation="REQUIRED"
 						transaction-manager="txManager"/>
 			</integration:poller>
-	</aws-sqs:inbound-channel-adapter>	
+	</aws-sqs:inbound-channel-adapter>
+	
+	<aws-sqs:inbound-channel-adapter id="inboundChannelAdapterTwo"
+		propertiesFile="classpath:awscredentials.properties"
+		channel="inboundSQSAdapter"
+		sqs-queue="https://queue.amazonaws.com/439454740675/MyTestQueue"
+		transactional="true"
+		max-redelivery-attempts="3"
+		message-transformer="dummyTransformer"
+		check-sns-notification="true"
+		sns-header-prefix="SNS_">
+			<integration:poller fixed-rate="5000">
+				<integration:transactional isolation="DEFAULT" propagation="REQUIRED"
+						transaction-manager="txManager"/>
+			</integration:poller>
+	</aws-sqs:inbound-channel-adapter>
 	
 	<bean id="txManager" class="org.springframework.integration.common.DummyTransactionManager"/>
 	
-	<bean id="dummyOperation" class="org.springframework.integration.aws.sqs.config.DummyAmazonSQSOperation"/>		
+	<bean id="dummyOperation" class="org.springframework.integration.aws.sqs.config.DummyAmazonSQSOperation"/>
+	<bean id="dummyTransformer"	 class="org.springframework.integration.aws.sqs.config.DummySQSMessageTransformer"/>	
 </beans>
